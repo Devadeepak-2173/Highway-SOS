@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZENITH SOS - Highway Emergency Assistance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/@stacks/connect@latest/dist/index.js"></script>
+    <script src="https://unpkg.com/@stacks/transactions@latest/dist/index.js"></script>
+    <script src="https://unpkg.com/@stacks/network@latest/dist/index.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .loading-spinner {
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #3498db;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .toast {
+            transition: transform 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+    <!-- Navigation -->
+    <nav class="gradient-bg text-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-car-battery text-xl"></i>
+                    <h1 class="text-xl font-bold">ZENITH SOS Finder</h1>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <div id="wallet-status" class="bg-white/20 px-3 py-1 rounded text-sm">
+                        <i class="fas fa-wallet mr-1"></i>
+                        <span>Not Connected</span>
+                    </div>
+                    <button id="connect-wallet-btn" class="bg-white text-purple-700 px-4 py-2 rounded font-semibold text-sm">
+                        Connect Wallet
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Connection Status -->
+        <div id="connection-section" class="text-center py-12">
+            <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-wallet text-purple-600 text-2xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Connect Your Wallet</h2>
+            <p class="text-gray-600 mb-6">Connect your Leather Wallet to access highway emergency services</p>
+            <button id="main-connect-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold">
+                Connect Leather Wallet
+            </button>
+        </div>
+
+        <!-- App Content (hidden until connected) -->
+        <div id="app-content" class="hidden">
+            <!-- Welcome Section -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h2 class="text-2xl font-bold text-gray-800">Welcome, <span id="user-address"></span></h2>
+                        <p class="text-gray-600">You're connected and ready to use highway emergency services</p>
+                    </div>
+                    <button id="disconnect-btn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded text-sm">
+                        Disconnect
+                    </button>
+                </div>
+            </div>
+
+            <!-- Message Display -->
+            <div id="message-toast" class="toast fixed top-4 right-4 bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg transform translate-y-[-100px] transition-transform duration-300 z-50">
+                <div class="flex items-center">
+                    <i id="toast-icon" class="fas fa-info-circle mr-3"></i>
+                    <span id="toast-message"></span>
+                </div>
+            </div>
+
+            <!-- Register Mechanic -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-tools mr-2 text-blue-500"></i>Register as Mechanic
+                </h3>
+                <div class="space-y-3">
+                    <input id="mechanic-name" type="text" placeholder="Your Name" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <input id="mechanic-phone" type="text" placeholder="Phone Number" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <input id="mechanic-location" type="text" placeholder="Service Location" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    <button id="register-mechanic-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-semibold">
+                        <span id="register-spinner" class="loading-spinner hidden"></span>
+                        <span>Register as Mechanic</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Verify Mechanic -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-shield-alt mr-2 text-green-500"></i>Verify Mechanic
+                </h3>
+                <div class="space-y-3">
+                    <input id="verify-address" type="text" placeholder="Mechanic's STX Address" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
+                    <button id="verify-mechanic-btn" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-semibold">
+                        <span id="verify-spinner" class="loading-spinner hidden"></span>
+                        <span>Verify Mechanic</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- SOS Request -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-exclamation-triangle mr-2 text-red-500"></i>Emergency SOS
+                </h3>
+                <div class="space-y-3">
+                    <input id="sos-address" type="text" placeholder="Mechanic's STX Address" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500">
+                    <button id="send-sos-btn" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-semibold">
+                        <span id="sos-spinner" class="loading-spinner hidden"></span>
+                        <span>Send SOS Request</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Rate Mechanic -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-star mr-2 text-yellow-500"></i>Rate Service
+                </h3>
+                <div class="space-y-3">
+                    <input id="rate-address" type="text" placeholder="Mechanic's STX Address" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Rating (1-5 stars)</label>
+                        <div class="flex space-x-2">
+                            <button data-rating="1" class="rating-star w-10 h-10 bg-gray-100 text-gray-600 rounded-lg border border-gray-300">1</button>
+                            <button data-rating="2" class="rating-star w-10 h-10 bg-gray-100 text-gray-600 rounded-lg border border-gray-300">2</button>
+                            <button data-rating="3" class="rating-star w-10 h-10 bg-yellow-400 text-white rounded-lg border border-yellow-500">3</button>
+                            <button data-rating="4" class="rating-star w-10 h-10 bg-gray-100 text-gray-600 rounded-lg border border-gray-300">4</button>
+                            <button data-rating="5" class="rating-star w-10 h-10 bg-gray-100 text-gray-600 rounded-lg border border-gray-300">5</button>
+                        </div>
+                    </div>
+                    <button id="rate-mechanic-btn" class="w-full bg-yellow-600 hover:bg-yellow-700 text-white py-3 rounded-lg font-semibold">
+                        <span id="rate-spinner" class="loading-spinner hidden"></span>
+                        <span>Submit Rating</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Mechanics List -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800">
+                        <i class="fas fa-users mr-2 text-purple-500"></i>Available Mechanics
+                    </h3>
+                    <button id="refresh-mechanics-btn" class="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded text-sm">
+                        <i class="fas fa-sync-alt mr-1"></i>Refresh
+                    </button>
+                </div>
+                <div id="mechanics-list" class="space-y-3">
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                        <p>Loading mechanics...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const CONTRACT_ADDRESS = 'YOUR_CONTRACT_ADDRESS'; // Replace with your contract address
+        const CONTRACT_NAME = 'zenith-sos';
+        const NETWORK = new StacksNetwork.StacksTestnet();
+        
+        // State
+        let userSession = null;
+        let currentRating = 3;
+        let userAddress = '';
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            initApp();
+            setupEventListeners();
+            simulateMechanics(); // For demo purposes
+        });
+
+        function initApp() {
+            // Initialize user session
+            const appConfig = new StacksConnect.AppConfig(['store_write', 'publish_data']);
+            userSession = new StacksConnect.UserSession({ appConfig });
+            
+            // Check if user is already signed in
+            if (userSession.isUserSignedIn()) {
+                const userData = userSession.loadUserData();
+                userAddress = userData.profile.stxAddress.testnet;
+                showAppContent();
+            }
+        }
+
+        function setupEventListeners() {
+            // Wallet connection
+            document.getElementById('connect-wallet-btn').addEventListener('click', connectWallet);
+            document.getElementById('main-connect-btn').addEventListener('click', connectWallet);
+            document.getElementById('disconnect-btn').addEventListener('click', disconnectWallet);
+            
+            // Contract interactions
+            document.getElementById('register-mechanic-btn').addEventListener('click', registerMechanic);
+            document.getElementById('verify-mechanic-btn').addEventListener('click', verifyMechanic);
+            document.getElementById('send-sos-btn').addEventListener('click', sendSOS);
+            document.getElementById('rate-mechanic-btn').addEventListener('click', rateMechanic);
+            document.getElementById('refresh-mechanics-btn').addEventListener('click', loadMechanics);
+            
+            // Rating stars
+            document.querySelectorAll('.rating-star').forEach(star => {
+                star.addEventListener('click', function() {
+                    currentRating = parseInt(this.getAttribute('data-rating'));
+                    updateRatingStars(currentRating);
+                });
+            });
+        }
+
+        function connectWallet() {
+            if (userSession.isUserSignedIn()) {
+                showToast('Already connected', 'info');
+                return;
+            }
+            
+            StacksConnect.showConnect({
+                appDetails: {
+                    name: 'ZENITH SOS Finder',
+                    icon: window.location.origin + '/favicon.ico'
+                },
+                userSession: userSession,
+                onFinish: () => {
+                    const userData = userSession.loadUserData();
+                    userAddress = userData.profile.stxAddress.testnet;
+                    showAppContent();
+                    showToast('Wallet connected successfully!', 'success');
+                },
+                onCancel: () => {
+                    showToast('Wallet connection cancelled', 'info');
+                }
+            });
+        }
+
+        function disconnectWallet() {
+            if (userSession.isUserSignedIn()) {
+                userSession.signUserOut();
+                hideAppContent();
+                showToast('Wallet disconnected', 'info');
+            }
+        }
+
+        function showAppContent() {
+            document.getElementById('connection-section').classList.add('hidden');
+            document.getElementById('app-content').classList.remove('hidden');
+            document.getElementById('user-address').textContent = userAddress.substring(0, 8) + '...' + userAddress.substring(userAddress.length - 4);
+            updateWalletStatus(true);
+        }
+
+        function hideAppContent() {
+            document.getElementById('connection-section').classList.remove('hidden');
+            document.getElementById('app-content').classList.add('hidden');
+            updateWalletStatus(false);
+        }
+
+        function updateWalletStatus(connected) {
+            const statusElement = document.getElementById('wallet-status');
+            if (connected) {
+                statusElement.innerHTML = '<i class="fas fa-check-circle mr-1"></i>Connected';
+                statusElement.classList.remove('bg-white/20');
+                statusElement.classList.add('bg-green-500');
+            } else {
+                statusElement.innerHTML = '<i class="fas fa-wallet mr-1"></i>Not Connected';
+                statusElement.classList.remove('bg-green-500');
+                statusElement.classList.add('bg-white/20');
+            }
+        }
+
+        async function registerMechanic() {
+            if (!userSession.isUserSignedIn()) {
+                showToast('Please connect your wallet first', 'error');
+                return;
+            }
+
+            const name = document.getElementById('mechanic-name').value;
+            const phone = document.getElementById('mechanic-phone').value;
+            const location = document.getElementById('mechanic-location').value;
+
+            if (!name || !phone || !location) {
+                showToast('Please fill all fields', 'error');
+                return;
+            }
+
+            setLoading('register', true);
+
+            try {
+                const functionArgs = [
+                    StacksTransactions.stringAsciiCV(name),
+                    StacksTransactions.stringAsciiCV(phone),
+                    StacksTransactions.stringAsciiCV(location)
+                ];
+
+                await StacksConnect.openContractCall({
+                    contractAddress: CONTRACT_ADDRESS,
+                    contractName: CONTRACT_NAME,
+                    functionName: 'register-mechanic',
+                    functionArgs,
+                    network: NETWORK,
+                    appDetails: {
+                        name: 'ZENITH SOS Finder',
+                        icon: window.location.origin + '/favicon.ico'
+                    },
+                    onFinish: (data) => {
+                        showToast('Mechanic registered successfully! Tx: ' + data.txId.substring(0, 8) + '...', 'success');
+                        setLoading('register', false);
+                        loadMechanics();
+                    },
+                    onCancel: () => {
+                        showToast('Registration cancelled', 'info');
+                        setLoading('register', false);
+                    }
+                });
+            } catch (error) {
+                showToast('Error registering mechanic: ' + error.message, 'error');
+                setLoading('register', false);
+            }
+        }
+
+        async function verifyMechanic() {
+            if (!userSession.isUserSignedIn()) {
+                showToast('Please connect your wallet first', 'error');
+                return;
+            }
+
+            const address = document.getElementById('verify-address').value;
+            if (!address) {
+                showToast('Please enter a mechanic address', 'error');
+                return;
+            }
+
+            setLoading('verify', true);
+
+            try {
+                const functionArgs = [
+                    StacksTransactions.standardPrincipalCV(address)
+                ];
+
+                await StacksConnect.openContractCall({
+                    contractAddress: CONTRACT_ADDRESS,
+                    contractName: CONTRACT_NAME,
+                    functionName: 'verify-mechanic',
+                    functionArgs,
+                    network: NETWORK,
+                    appDetails: {
+                        name: 'ZENITH SOS Finder',
+                        icon: window.location.origin + '/favicon.ico'
+                    },
+                    onFinish: (data) => {
+                        showToast('Mechanic verified successfully!', 'success');
+                        setLoading('verify', false);
+                        loadMechanics();
+                    },
+                    onCancel: () => {
+                        showToast('Verification cancelled', 'info');
+                        setLoading('verify', false);
+                    }
+                });
+            } catch (error) {
+                showToast('Error verifying mechanic: ' + error.message, 'error');
+                setLoading('verify', false);
+            }
+        }
+
+        async function sendSOS() {
+            if (!userSession.isUserSignedIn()) {
+                showToast('Please connect your wallet first', 'error');
+                return;
+            }
+
+            const address = document.getElementById('sos-address').value;
+            if (!address) {
+                showToast('Please enter a mechanic address', 'error');
+                return;
+            }
+
+            setLoading('sos', true);
+
+            try {
+                const functionArgs = [
+                    StacksTransactions.standardPrincipalCV(address)
+                ];
+
+                await StacksConnect.openContractCall({
+                    contractAddress: CONTRACT_ADDRESS,
+                    contractName: CONTRACT_NAME,
+                    functionName: 'send-sos',
+                    functionArgs,
+                    network: NETWORK,
+                    appDetails: {
+                        name: 'ZENITH SOS Finder',
+                        icon: window.location.origin + '/favicon.ico'
+                    },
+                    onFinish: (data) => {
+                        showToast('SOS request sent! Help is on the way.', 'success');
+                        setLoading('sos', false);
+                    },
+                    onCancel: () => {
+                        showToast('SOS request cancelled', 'info');
+                        setLoading('sos', false);
+                    }
+                });
+            } catch (error) {
+                showToast('Error sending SOS: ' + error.message, 'error');
+                setLoading('sos', false);
+            }
+        }
+
+        async function rateMechanic() {
+            if (!userSession.isUserSignedIn()) {
+                showToast('Please connect your wallet first', 'error');
+                return;
+            }
+
+            const address = document.getElementById('rate-address').value;
+            if (!address) {
+                showToast('Please enter a mechanic address', 'error');
+                return;
+            }
+
+            setLoading('rate', true);
+
+            try {
+                const functionArgs = [
+                    StacksTransactions.standardPrincipalCV(address),
+                    StacksTransactions.uintCV(currentRating)
+                ];
+
+                await StacksConnect.openContractCall({
+                    contractAddress: CONTRACT_ADDRESS,
+                    contractName: CONTRACT_NAME,
+                    functionName: 'rate-mechanic',
+                    functionArgs,
+                    network: NETWORK,
+                    appDetails: {
+                        name: 'ZENITH SOS Finder',
+                        icon: window.location.origin + '/favicon.ico'
+                    },
+                    onFinish: (data) => {
+                        showToast('Rating submitted successfully!', 'success');
+                        setLoading('rate', false);
+                    },
+                    onCancel: () => {
+                        showToast('Rating cancelled', 'info');
+                        setLoading('rate', false);
+                    }
+                });
+            } catch (error) {
+                showToast('Error submitting rating: ' + error.message, 'error');
+                setLoading('rate', false);
+            }
+        }
+
+        function loadMechanics() {
+            // In a real implementation, you would fetch from the contract
+            // For demo, we'll use simulated data
+            simulateMechanics();
+        }
+
+        function simulateMechanics() {
+            const mockMechanics = [
+                {
+                    principal: 'ST3J2GVMMM2R07ZFBJDWTYEYAR8FZH5WKDTFJ9AHA',
+                    name: 'John\'s Auto Repair',
+                    phone: '+1 (555) 123-4567',
+                    location: 'Highway 101, Exit 45',
+                    verified: true,
+                    rating: 4.8,
+                    reviews: 24
+                },
+                {
+                    principal: 'ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG',
+                    name: 'Highway Helpers',
+                    phone: '+1 (555) 987-6543',
+                    location: 'I-5, Mile Marker 128',
+                    verified: true,
+                    rating: 4.9,
+                    reviews: 37
+                }
+            ];
+            
+            displayMechanics(mockMechanics);
+        }
+
+        function displayMechanics(mechanics) {
+            const container = document.getElementById('mechanics-list');
+            container.innerHTML = '';
+
+            if (mechanics.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-500">
+                        <i class="fas fa-tools text-2xl mb-2"></i>
+                        <p>No mechanics available</p>
+                    </div>
+                `;
+                return;
+            }
+
+            mechanics.forEach(mechanic => {
+                const card = document.createElement('div');
+                card.className = 'border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all';
+                card.innerHTML = `
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-semibold text-gray-800">${mechanic.name}</h4>
+                            <p class="text-sm text-gray-600">${mechanic.phone}</p>
+                            <p class="text-sm text-gray-600">${mechanic.location}</p>
+                            <div class="flex items-center mt-2">
+                                <span class="text-sm ${mechanic.verified ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'} px-2 py-1 rounded">
+                                    ${mechanic.verified ? 'Verified' : 'Pending'}
+                                </span>
+                                <span class="text-sm text-gray-600 ml-2">
+                                    ⭐ ${mechanic.rating} (${mechanic.reviews} reviews)
+                                </span>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                                ${mechanic.principal.substring(0, 8)}...
+                            </span>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function setLoading(buttonType, isLoading) {
+            const spinner = document.getElementById(`${buttonType}-spinner`);
+            const button = document.getElementById(`${buttonType}-${buttonType}-btn`);
+            
+            if (isLoading) {
+                spinner.classList.remove('hidden');
+                button.disabled = true;
+            } else {
+                spinner.classList.add('hidden');
+                button.disabled = false;
+            }
+        }
+
+        function updateRatingStars(rating) {
+            document.querySelectorAll('.rating-star').forEach(star => {
+                const starRating = parseInt(star.getAttribute('data-rating'));
+                if (starRating === rating) {
+                    star.classList.remove('bg-gray-100', 'text-gray-600', 'border-gray-300');
+                    star.classList.add('bg-yellow-400', 'text-white', 'border-yellow-500');
+                } else {
+                    star.classList.remove('bg-yellow-400', 'text-white', 'border-yellow-500');
+                    star.classList.add('bg-gray-100', 'text-gray-600', 'border-gray-300');
+                }
+            });
+        }
+
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('message-toast');
+            const icon = document.getElementById('toast-icon');
+            const messageElement = document.getElementById('toast-message');
+
+            // Set icon based on type
+            switch (type) {
+                case 'success':
+                    icon.className = 'fas fa-check-circle text-green-400 mr-3';
+                    break;
+                case 'error':
+                    icon.className = 'fas fa-exclamation-circle text-red-400 mr-3';
+                    break;
+                case 'warning':
+                    icon.className = 'fas fa-exclamation-triangle text-yellow-400 mr-3';
+                    break;
+                default:
+                    icon.className = 'fas fa-info-circle text-blue-400 mr-3';
+            }
+
+            messageElement.textContent = message;
+            toast.classList.remove('translate-y-[-100px]');
+            toast.classList.add('translate-y-0');
+
+            // Hide after 3 seconds
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0');
+                toast.classList.add('translate-y-[-100px]');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
